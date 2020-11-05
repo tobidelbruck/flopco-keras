@@ -11,7 +11,7 @@ except ImportError:
 
 def load_requirements(file_name):
     requirements = parse_requirements(file_name, session="test")
-    return [str(item.req) for item in requirements]
+    return [str(item.requirement) for item in requirements]
 
 version="v0.1.1"
 setup(
