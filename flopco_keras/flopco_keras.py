@@ -5,9 +5,18 @@ import numpy as np
 from collections import defaultdict
 from functools import partial
 import copy
+import logging
+
+
 
 from flopco_keras.compute_layer_flops import *
 
+log=logging.getLogger(__name__)
+ch = logging.StreamHandler()
+ch.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+ch.setFormatter(formatter)
+log.addHandler(ch)
 
 class FlopCoKeras():
     
@@ -32,11 +41,24 @@ class FlopCoKeras():
                     'TensorFlowOpLayer': compute_tfop_flops,
                     'MaxPooling2D': compute_pool2d_flops,
                     'Add': compute_add_flops,
-                    'GlobalAveragePooling2D': compute_globalavgpool2d_flops}
+                    'Flatten': compute_flatten_flops,
+                    'Dropout': compute_dropout_flops,
+                    'GlobalAveragePooling2D': compute_globalavgpool2d_flops,
+                    'DepthwiseConv2D': compute_depthwiseconv2d_flops,
+                    'Reshape': compute_reshape_flops,
+        }
 
-        
-        self.get_stats( flops = True, macs = True)
-        
+        self.total_flops =None
+        self.total_macs = None
+        self.relative_flops = None
+        self.relative_macs = None
+
+        try:
+            self.get_stats( flops = True, macs = True)
+        except Exception as e:
+            log.error(f'Could not compute flops: caught {e} (probably cannot compute this type of layer)')
+            del self.model
+            return
         self.total_flops = sum(self.flops)
         self.total_macs = sum(self.macs)
         # self.total_params = sum(self.params) #TO DO 
@@ -67,6 +89,11 @@ class FlopCoKeras():
         #             self.params[mname] += p.numel()
     
     def _save_flops(self, layer, macs=False):
+        """ Computes flops for a layer and optionally saves the MACs for that layer
+
+        :param layer: the layer
+        :param macs: set True to save layer MACs to self.flops list
+        """
         flops = self.get_flops[layer.__class__.__name__](layer, macs)
         if macs:
             self.macs.append(flops)
@@ -75,7 +102,15 @@ class FlopCoKeras():
         
 
     def get_stats(self, flops = False, macs = False):
-        
+        """ Gets stats for a layer and optionally saves the MACs for that layer
+        Use it by constucting f=FlopCo(model), calling f.get_stats(), and then accessing f.total_flops, etc
+
+         :param layer: the layer
+         :param macs: set True to save layer MACs to self.flops list
+
+         :returns: None
+         """
+
         # if params:
         #     self.count_params()
        
@@ -85,9 +120,18 @@ class FlopCoKeras():
         if macs:
             self.macs = []
 
+        layers = None
+        if hasattr(self.model, 'layers'):
+            log.info('found model.layers')
+            layers = self.model.layers
+        elif isinstance(self.model, tuple) and hasattr(self.model[0], 'layers'):
+            log.info('found model.layers')
+            layers = self.model[0].layers
         if flops:
-            for layer in self.model.layers:
+            for layer in layers:
                 self._save_flops(layer)
         if macs:
-            for layer in self.model.layers:
+            for layer in layers:
                 self._save_flops(layer, macs=True)
+
+
