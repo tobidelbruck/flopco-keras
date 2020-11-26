@@ -6,6 +6,7 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 ch.setFormatter(formatter)
 log.addHandler(ch)
 
+
 def numel(w : list):
     out = 1
     for k in w:
@@ -63,7 +64,9 @@ def compute_conv2d_flops(layer, macs = False):
 
 def compute_depthwiseconv2d_flops(layer, macs = False):
     # TODO
-    log.warning(f'computing Ops in depthwise kernel for {layer} is not correctly implemented; it overestimates Ops now')
+    if not compute_depthwiseconv2d_flops.supress_further_warnings:
+        log.warning(f'computing Ops in depthwise kernel for {layer} is not correctly implemented; it overestimates Ops now (suppressing further warnings about this layer type)')
+        compute_depthwiseconv2d_flops.supress_further_warnings=True
 #     _, cin, h, w = input_shape
     if layer.data_format == "channels_first":
         _, input_channels, _, _ = layer.input_shape
@@ -81,12 +84,12 @@ def compute_depthwiseconv2d_flops(layer, macs = False):
     # todo add .depthwise_kernel.shape  (3,3,8,1)
     flops = h * w * output_channels * input_channels * w_h * w_w
 
-
     if not macs:
         flops_bias = numel(layer.output_shape[1:]) if layer.use_bias is not None else 0
         flops = 2 * flops + flops_bias
 
     return int(flops)
+compute_depthwiseconv2d_flops.supress_further_warnings=False
 
 
 def compute_fc_flops(layer, macs = False):
