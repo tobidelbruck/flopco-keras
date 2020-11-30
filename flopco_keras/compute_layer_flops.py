@@ -149,6 +149,9 @@ def compute_globalavgpool2d_flops(layer, macs = False):
 
     return h*w
 
+def compute_globalmaxpool2d_flops(layer, macs = False):
+    return compute_globalavgpool2d_flops(layer, macs)
+
 def compute_softmax_flops(layer, macs = False):
     
     nfeatures = numel(layer.input_shape[1:])
