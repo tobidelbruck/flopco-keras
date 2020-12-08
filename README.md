@@ -13,6 +13,11 @@ Installation
 -----
 ```pip install flopco-keras ```
 
+If this fails because of req error, you can run from command line
+```shell
+python setup.py install
+```
+
 Quick start
 -----
 ```python
